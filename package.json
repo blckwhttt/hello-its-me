@@ -89,7 +89,17 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "HelloitsmeSetup.${ext}"
+      "artifactName": "HelloitsmeSetup.${ext}",
+      "perMachine": true,
+      "installerIcon": "public/favicons/favicon.ico",
+      "installerHeaderIcon": "public/favicons/favicon.ico",
+      "uninstallerIcon": "public/favicons/favicon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hello, it's me",
+      "runAfterFinish": true,
+      "menuCategory": "Helloitsme",
+      "include": "build/installer.nsh"
     },
     "publish": [
       {
