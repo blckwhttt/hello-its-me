@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { RoomsService, Room } from '../../core/services/rooms.service';
 import { User } from '../../core/models/user.model';
+import { PageMetaService } from '../../core/services/page-meta.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { NotificationComponent } from '../../shared/components/notification/notification.component';
@@ -60,9 +61,15 @@ export class DashboardComponent implements OnInit {
     private authService: AuthService,
     private roomsService: RoomsService,
     private router: Router,
+    private pageMeta: PageMetaService,
   ) {}
 
   ngOnInit(): void {
+    this.pageMeta.set({
+      title: 'Главная',
+      description: 'Создайте свою первую комнату или присоединитесь к существующей',
+    });
+
     this.authService.currentUser$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((user) => {

@@ -1,6 +1,6 @@
 {
-  "name": "Hello, it's me",
-  "short_name": "Hello, it's me",
+  "name": "Twine",
+  "short_name": "Twine",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

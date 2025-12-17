@@ -1,17 +1,25 @@
-import { Directive, Input, ElementRef, HostListener, Renderer2, OnDestroy } from '@angular/core';
+import { Directive, Input, ElementRef, HostListener, Renderer2, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 
 @Directive({
   selector: '[appTooltip]',
   standalone: true,
 })
-export class TooltipDirective implements OnDestroy {
+export class TooltipDirective implements OnDestroy, OnChanges {
   @Input() appTooltip = '';
   @Input() tooltipPosition: 'top' | 'bottom' | 'left' | 'right' = 'top';
 
   private tooltipElement: HTMLElement | null = null;
+  private tooltipTextSpan: HTMLElement | null = null;
   private showTimeout: any;
 
   constructor(private el: ElementRef, private renderer: Renderer2) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Если текст тултипа изменился и тултип уже отображается
+    if (changes['appTooltip'] && this.tooltipElement) {
+      this.updateTooltipText(changes['appTooltip'].currentValue);
+    }
+  }
 
   @HostListener('mouseenter')
   onMouseEnter(): void {
@@ -32,7 +40,11 @@ export class TooltipDirective implements OnDestroy {
     if (this.tooltipElement) return;
 
     this.tooltipElement = this.renderer.createElement('div');
-    this.renderer.setProperty(this.tooltipElement, 'innerHTML', this.appTooltip);
+    
+    // Создаем span для текста
+    this.tooltipTextSpan = this.renderer.createElement('span');
+    this.renderer.setProperty(this.tooltipTextSpan, 'innerHTML', this.appTooltip);
+    this.renderer.appendChild(this.tooltipElement, this.tooltipTextSpan);
 
     // Стили
     this.renderer.setStyle(this.tooltipElement, 'position', 'absolute');
@@ -71,6 +83,60 @@ export class TooltipDirective implements OnDestroy {
     });
   }
 
+  private updateTooltipText(newText: string): void {
+    if (!this.tooltipTextSpan || !this.tooltipElement) return;
+
+    // Обновляем innerHTML только span'а
+    this.renderer.setProperty(this.tooltipTextSpan, 'innerHTML', newText);
+
+    // Проверяем, не выходит ли обновленный тултип за границы экрана
+    requestAnimationFrame(() => {
+      if (!this.tooltipElement) return;
+
+      const tooltipRect = this.tooltipElement.getBoundingClientRect();
+      const edgeOffset = 8;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let needsRepositioning = false;
+      let currentLeft = parseFloat(this.tooltipElement.style.left);
+      let currentTop = parseFloat(this.tooltipElement.style.top);
+
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      const scrollPos = window.pageYOffset || document.documentElement.scrollTop;
+
+      // Проверяем горизонтальные границы
+      const rightEdge = tooltipRect.right;
+      const leftEdge = tooltipRect.left;
+
+      if (rightEdge > viewportWidth - edgeOffset) {
+        currentLeft = scrollLeft + viewportWidth - tooltipRect.width - edgeOffset;
+        needsRepositioning = true;
+      } else if (leftEdge < edgeOffset) {
+        currentLeft = scrollLeft + edgeOffset;
+        needsRepositioning = true;
+      }
+
+      // Проверяем вертикальные границы
+      const bottomEdge = tooltipRect.bottom;
+      const topEdge = tooltipRect.top;
+
+      if (bottomEdge > viewportHeight - edgeOffset) {
+        currentTop = scrollPos + viewportHeight - tooltipRect.height - edgeOffset;
+        needsRepositioning = true;
+      } else if (topEdge < edgeOffset) {
+        currentTop = scrollPos + edgeOffset;
+        needsRepositioning = true;
+      }
+
+      // Применяем новую позицию только если нужно
+      if (needsRepositioning) {
+        this.renderer.setStyle(this.tooltipElement, 'left', `${currentLeft}px`);
+        this.renderer.setStyle(this.tooltipElement, 'top', `${currentTop}px`);
+      }
+    });
+  }
+
   private position(): void {
     if (!this.tooltipElement) return;
 
@@ -79,6 +145,10 @@ export class TooltipDirective implements OnDestroy {
 
     const scrollPos = window.pageYOffset || document.documentElement.scrollTop;
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+    const edgeOffset = 8; // Отступ от края экрана
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
     let top = 0;
     let left = 0;
@@ -102,6 +172,30 @@ export class TooltipDirective implements OnDestroy {
         break;
     }
 
+    // Проверка и коррекция горизонтальных границ
+    const rightEdge = left + tooltipPos.width - scrollLeft;
+    const leftEdge = left - scrollLeft;
+
+    if (rightEdge > viewportWidth - edgeOffset) {
+      // Тултип выходит за правую границу
+      left = scrollLeft + viewportWidth - tooltipPos.width - edgeOffset;
+    } else if (leftEdge < edgeOffset) {
+      // Тултип выходит за левую границу
+      left = scrollLeft + edgeOffset;
+    }
+
+    // Проверка и коррекция вертикальных границ
+    const bottomEdge = top + tooltipPos.height - scrollPos;
+    const topEdge = top - scrollPos;
+
+    if (bottomEdge > viewportHeight - edgeOffset) {
+      // Тултип выходит за нижнюю границу
+      top = scrollPos + viewportHeight - tooltipPos.height - edgeOffset;
+    } else if (topEdge < edgeOffset) {
+      // Тултип выходит за верхнюю границу
+      top = scrollPos + edgeOffset;
+    }
+
     this.renderer.setStyle(this.tooltipElement, 'top', `${top}px`);
     this.renderer.setStyle(this.tooltipElement, 'left', `${left}px`);
   }
@@ -110,6 +204,7 @@ export class TooltipDirective implements OnDestroy {
     if (this.tooltipElement) {
       const el = this.tooltipElement;
       this.tooltipElement = null; // Сбрасываем ссылку сразу
+      this.tooltipTextSpan = null; // Сбрасываем ссылку на span
 
       // Анимация исчезновения
       this.renderer.setStyle(el, 'opacity', '0');
@@ -133,6 +228,7 @@ export class TooltipDirective implements OnDestroy {
         this.renderer.removeChild(document.body, this.tooltipElement);
       }
       this.tooltipElement = null;
+      this.tooltipTextSpan = null;
     }
   }
 }

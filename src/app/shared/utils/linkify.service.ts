@@ -7,9 +7,9 @@ export class LinkifyService {
   // Robust regex for URL detection (http/https/www)
   // Handles:
   // - http://, https://, www. prefixes
-  // - Query parameters, fragments, and special characters in URLs
-  // - Stops at common punctuation if at the end (.,!?) unless part of the URL structure (like wikipedia.org/wiki/Foo_(Bar))
-  private readonly urlRegex = /((?:https?:\/\/|www\.)[a-zA-Z0-9][-a-zA-Z0-9@:%._\+~#=]{0,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&//=]*))/gi;
+  // - Query parameters with special chars including Unicode (Russian, etc)
+  // - Stops at common punctuation if at the end unless part of URL
+  private readonly urlRegex = /((?:https?:\/\/|www\.)[^\s]+)/gi;
 
   constructor() {}
 

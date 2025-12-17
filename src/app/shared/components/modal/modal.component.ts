@@ -58,10 +58,12 @@ export type ModalVariant = 'default' | 'glass' | 'solid' | 'transparent';
       <!-- Modal -->
       <div
         class="relative w-full transition-all duration-200 ease-out transform"
-        [ngClass]="[sizeClass, customLayout ? '' : 'shadow-2xl', customLayout ? '' : variantClass, customClass]"
+        [ngClass]="[customWidth ? '' : sizeClass, customLayout ? '' : 'shadow-2xl', customLayout ? '' : variantClass, customClass]"
         [class.opacity-0]="!isVisible"
         [class.scale-95]="!isVisible"
-        [style.max-height]="maxHeight"
+        [style.max-width]="customWidth"
+        [style.max-height]="customHeight || maxHeight"
+        [style.height]="customHeight"
       >
         <!-- Hidden title for screen readers -->
         @if (heading) {
@@ -165,6 +167,17 @@ export class ModalComponent implements OnChanges, AfterViewInit {
   @Input() size: ModalSize = 'xl';
 
   /**
+   * Кастомная ширина модального окна (например: '800px', '90%', '50vw')
+   * Если указано, то параметр size игнорируется
+   */
+  @Input() customWidth = '';
+
+  /**
+   * Кастомная высота модального окна (например: '600px', '80vh', '90%')
+   */
+  @Input() customHeight = '';
+
+  /**
    * Позиционирование модального окна
    */
   @Input() position: ModalPosition = 'center';
@@ -190,7 +203,7 @@ export class ModalComponent implements OnChanges, AfterViewInit {
   @Input() backdropClass = 'bg-black/55';
 
   /**
-   * Максимальная высота модального окна
+   * Максимальная высота модального окна (deprecated, используйте customHeight)
    */
   @Input() maxHeight = '';
 

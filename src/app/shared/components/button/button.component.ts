@@ -49,10 +49,10 @@ export class ButtonComponent {
     };
     
     const variantClasses = {
-      primary: 'bg-gradient-to-r from-violet-600 to-violet-500 text-white hover:from-violet-700 hover:to-violet-600 hover:opacity-90 shadow-lg shadow-violet-500/20',
+      primary: 'bg-linear-to-r from-violet-600 to-violet-500 text-white hover:from-violet-700 hover:to-violet-600 hover:opacity-90 shadow-lg shadow-violet-500/20',
       secondary: 'bg-white/5 text-white/90 hover:bg-white/10 border border-white/5',
-      danger: 'bg-gradient-to-r from-red-600/80 to-red-500/80 text-white hover:from-red-700/80 hover:to-red-600/80 hover:opacity-90 shadow-lg shadow-red-500/20',
-      success: 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:from-emerald-700 hover:to-emerald-600 hover:opacity-90 shadow-lg shadow-emerald-500/20',
+      danger: 'bg-linear-to-r from-red-600/80 to-red-500/80 text-white hover:from-red-700/80 hover:to-red-600/80 hover:opacity-90 shadow-lg shadow-red-500/20',
+      success: 'bg-linear-to-r from-emerald-600 to-emerald-500 text-white hover:from-emerald-700 hover:to-emerald-600 hover:opacity-90 shadow-lg shadow-emerald-500/20',
       ghost: 'text-white/70 hover:bg-white/5 hover:text-white'
     };
     

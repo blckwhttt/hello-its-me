@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hello, it's me - Загрузка</title>
+    <title>Twine - Загрузка</title>
     <link rel="stylesheet" href="splash.css" />
   </head>
   <body>
     <div class="splash-container">
       <!-- Логотип -->
       <div class="logo-container">
-        <img src="public/logo.png" alt="Hello, it's me" class="logo" />
+        <img src="public/logo/logo-icon.svg" alt="Twine" class="logo" />
       </div>
 
       <!-- Статус текст -->
@@ -103,10 +103,12 @@
       });
 
       ipcRenderer.on('error', () => {
-        updateStatus('Ошибка при проверке обновлений');
+        // При ошибке обновления (если вдруг придет) просто продолжаем загрузку
+        updateStatus('Загрузка приложения...');
+        toggleProgress(false);
         setTimeout(() => {
-          updateStatus('Загрузка приложения...');
-        }, 1000);
+          // Можно отправить событие, если нужно, но тут просто меняем статус
+        }, 500);
       });
 
       // Начальная проверка после небольшой задержки

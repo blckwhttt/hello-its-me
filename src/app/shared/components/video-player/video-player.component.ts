@@ -36,7 +36,7 @@ import {
       (window:mouseup)="stopDrag()"
       (window:mousemove)="onDrag($event)"
       role="region"
-      aria-label="Hello, it's me | Video Player"
+      aria-label="Twine | Video Player"
     >
       <!-- Video Element -->
       <video

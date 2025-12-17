@@ -27,7 +27,7 @@ export interface SelectOption {
         type="button"
         #trigger
         (click)="toggle()"
-        class="w-full flex items-center justify-between bg-white/7 rounded-xl py-3 pl-3 pr-3 text-sm text-white transition-all hover:bg-white/10"
+        class="w-full flex items-center justify-between bg-white/7 rounded-full py-3 pl-3 pr-3 text-sm text-white transition-all hover:bg-white/10"
       >
         <div class="flex items-center gap-2 overflow-hidden">
           @if (selectedIcon) {
@@ -45,7 +45,7 @@ export interface SelectOption {
       <!-- Dropdown Menu -->
       @if (isRendered) {
       <div
-        class="absolute z-50 w-full mt-2 bg-(--bg-dark) border border-white/5 rounded-xl shadow-xl overflow-hidden origin-top transition-all"
+        class="absolute z-50 w-full mt-2 bg-(--bg-dark) border border-white/5 rounded-[18px] shadow-xl overflow-hidden origin-top transition-all"
         [class.opacity-0]="!isVisible"
         [class.-translate-y-[10px]]="!isVisible"
         [class.opacity-100]="isVisible"

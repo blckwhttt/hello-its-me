@@ -12,9 +12,23 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { Subject, takeUntil, firstValueFrom, combineLatest, Subscription, filter } from 'rxjs';
+import {
+  Subject,
+  takeUntil,
+  firstValueFrom,
+  combineLatest,
+  Subscription,
+  filter,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  of,
+  map,
+  catchError,
+  finalize,
+} from 'rxjs';
 import { UploadService } from '../../../core/services/upload.service';
-import { WebrtcService, MicrophoneStatus } from '../../../core/services/webrtc.service';
+import { WebrtcService, MicrophRoobertatus } from '../../../core/services/webrtc.service';
 import {
   WebsocketService,
   RoomParticipant,
@@ -25,6 +39,7 @@ import {
   ElectronService,
   ElectronScreenSource,
 } from '../../../core/services/electron.service';
+import { PushToTalkService } from '../../../core/services/push-to-talk.service';
 import { WebrtcApiService } from '../../../core/services/webrtc-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user.model';
@@ -45,11 +60,17 @@ import {
 } from '../../../shared/components/context-menu/context-menu.component';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
 import { LinkifyPipe } from '../../../shared/pipes/linkify.pipe';
+import { LinkifyService } from '../../../shared/utils/linkify.service';
+import { LinkPreviewComponent } from '../../../shared/components/link-preview/link-preview.component';
 import { ChatInputComponent } from '../chat-input/chat-input.component';
 import { ParticipantMenuService } from '../services/participant-menu.service';
 import { VolumePreferencesService } from '../../../core/services/volume-preferences.service';
 import { ScreenShareQuality } from '../../../core/config/webrtc.config';
 import { RouterOutlet } from '@angular/router';
+import { LinkPreviewService } from '../../../core/services/link-preview.service';
+import type { LinkPreview } from '../../../core/models/link-preview.model';
+import { PageMetaService } from '../../../core/services/page-meta.service';
+import { formatShortcutLabel } from '../../../shared/utils/shortcut.utils';
 import {
   LucideAngularModule,
   X,
@@ -65,7 +86,7 @@ import {
   Monitor,
   Users,
   Settings,
-  ArrowRight,
+  ArrowUp,
   Paperclip,
   File,
   Download,
@@ -76,6 +97,7 @@ import {
   RefreshCcw,
   AppWindow,
   MonitorUp,
+  AlertTriangle,
 } from 'lucide-angular';
 import { environment } from '../../../../environments/environment';
 
@@ -138,6 +160,7 @@ export interface MessageGroup {
     AvatarComponent,
     LinkifyPipe,
     ChatInputComponent,
+    LinkPreviewComponent,
   ],
   templateUrl: './call-room.component.html',
   styleUrls: ['./call-room.component.scss'],
@@ -177,6 +200,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   @ViewChild('chatInputRef') chatInputRef?: ChatInputComponent;
 
   private destroy$ = new Subject<void>();
+  private chatInputChanges$ = new Subject<string>();
 
   readonly X = X;
   readonly Link = Link;
@@ -191,7 +215,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   readonly Monitor = Monitor;
   readonly Users = Users;
   readonly Settings = Settings;
-  readonly ArrowRight = ArrowRight;
+  readonly ArrowUp = ArrowUp;
   readonly Paperclip = Paperclip;
   readonly File = File;
   readonly Download = Download;
@@ -202,6 +226,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   readonly RefreshCcw = RefreshCcw;
   readonly AppWindow = AppWindow;
   readonly MonitorUp = MonitorUp;
+  readonly AlertTriangle = AlertTriangle;
 
   roomId: string = '';
   currentUser: User | null = null;
@@ -211,6 +236,10 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   chatGroups: (DateSeparator | MessageGroup)[] = [];
   chatInput: string = '';
   isUploadingFile = false;
+  linkPreview: LinkPreview | null = null;
+  linkPreviewLoading = false;
+  linkPreviewError: string | null = null;
+  isLinkPreviewDismissed = false;
   initialScrollDone = false; // Флаг для первичной прокрутки
   selectedFiles: {
     file: File;
@@ -235,6 +264,10 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   selectedScreenShareQuality: ScreenShareQuality | null = null;
   localScreenStream: MediaStream | null = null;
   isElectronApp = false;
+  pushToTalkEnabled = false;
+  pushToTalkHolding = false;
+  pushToTalkManualOverride = false;
+  pushToTalkShortcutLabel = '';
 
   // Участники
   remotePeers: RemotePeer[] = [];
@@ -245,7 +278,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   audioAutoplayBlocked = false;
   
   // Статус микрофона
-  microphoneStatus: MicrophoneStatus = 'pending';
+  microphRoobertatus: MicrophRoobertatus = 'pending';
 
   // Модальные окна
   showLeaveModal = false;
@@ -259,6 +292,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   previewAudioEnabled = false;
   previewHasAudio = false;
   previewAudioVolume = 0.85;
+  previewIsFullscreen = false;
 
   // Источники демонстрации (Electron)
   screenSources: ScreenShareSource[] = [];
@@ -289,15 +323,25 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     private participantMenuService: ParticipantMenuService,
     private volumePreferences: VolumePreferencesService,
     private uploadService: UploadService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private linkPreviewService: LinkPreviewService,
+    private linkifyService: LinkifyService,
+    private pageMeta: PageMetaService,
+    private pushToTalkService: PushToTalkService
   ) {
     this.isElectronApp = this.electronService.isElectronApp();
+    this.pushToTalkShortcutLabel = formatShortcutLabel(
+      this.webrtcService.getCommunicationSettings().shortcut,
+      { fallbackLabel: 'Не задано' }
+    );
   }
 
   async ngOnInit() {
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
       this.currentUser = user;
     });
+
+    this.setupLinkPreviewSubscription();
 
     try {
       this.initializeScreenShareOptions();
@@ -307,6 +351,11 @@ export class CallRoomComponent implements OnInit, OnDestroy {
       if (!this.roomId) {
         throw new Error('Room ID not provided');
       }
+
+      this.pageMeta.set({
+        title: this.roomId ? `Комната ${this.roomId}` : 'Комната',
+        description: 'Звонок, чат и демонстрация экрана в комнате Twine',
+      });
 
       // Получаем текущего пользователя
       this.currentUser = await firstValueFrom(this.authService.getCurrentUser());
@@ -336,7 +385,8 @@ export class CallRoomComponent implements OnInit, OnDestroy {
       this.setupWebSocketSubscriptions();
       this.setupWebRTCParticipantSubscriptions();
       this.setupChatSubscriptions();
-      this.setupMicrophoneStatusSubscription();
+      this.setupMicrophRoobertatusSubscription();
+      this.setupPushToTalkBridge();
 
       // Подключаемся к WebSocket
       this.websocketService.connectSignaling();
@@ -426,10 +476,64 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   /**
    * Настройка подписки на статус микрофона
    */
-  private setupMicrophoneStatusSubscription(): void {
-    this.webrtcService.microphoneStatus.pipe(takeUntil(this.destroy$)).subscribe((status) => {
-      this.microphoneStatus = status;
+  private setupMicrophRoobertatusSubscription(): void {
+    this.webrtcService.microphRoobertatus.pipe(takeUntil(this.destroy$)).subscribe((status) => {
+      this.microphRoobertatus = status;
     });
+  }
+
+  /**
+   * Синхронизация режима рации с состоянием микрофона
+   */
+  private setupPushToTalkBridge(): void {
+    this.webrtcService.communicationSettingsChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((settings) => {
+        this.pushToTalkShortcutLabel = formatShortcutLabel(settings.shortcut, {
+          fallbackLabel: 'Не задано',
+        });
+      });
+
+    this.pushToTalkService.enabledChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((enabled) => {
+        this.pushToTalkEnabled = enabled;
+
+        if (!enabled) {
+          this.pushToTalkManualOverride = false;
+          this.pushToTalkService.forceRelease();
+          return;
+        }
+
+        // Включаем режим рации — микрофон выключен до удержания или закрепления
+        this.pushToTalkManualOverride = false;
+        this.applyPushToTalkMuteState(true);
+      });
+
+    this.pushToTalkService.holdingChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((holding) => {
+        this.pushToTalkHolding = holding;
+
+        if (!this.pushToTalkEnabled || this.pushToTalkManualOverride) {
+          return;
+        }
+
+        this.applyPushToTalkMuteState(!holding);
+      });
+  }
+
+  private applyPushToTalkMuteState(muted: boolean): void {
+    if (!this.roomId) {
+      return;
+    }
+
+    if (this.isMuted === muted) {
+      return;
+    }
+
+    this.webrtcService.setMuteState(muted);
+    this.websocketService.toggleAudio(this.roomId, !muted);
   }
 
   /**
@@ -447,10 +551,15 @@ export class CallRoomComponent implements OnInit, OnDestroy {
         .filter((f) => f.uploadedData)
         .map((f) => f.uploadedData!);
 
+      const disableLinkPreview = this.isLinkPreviewDismissed;
+
       this.chatInput = ''; // Очищаем сразу для UX
       this.selectedFiles = [];
+      this.linkPreview = null;
+      this.isLinkPreviewDismissed = false;
+      this.chatInputChanges$.next(this.chatInput);
 
-      await this.websocketService.sendChatMessage(this.roomId, content, uploadedFiles);
+      await this.websocketService.sendChatMessage(this.roomId, content, uploadedFiles, disableLinkPreview);
     } catch (error) {
       console.error('[CallRoom] Failed to send message:', error);
       // Можно вернуть текст в инпут при ошибке, но пока просто логируем
@@ -642,6 +751,10 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  onChatInputChanged(value: string): void {
+    this.chatInputChanges$.next(value);
+  }
+
   private processMessages(): void {
     const groups: (DateSeparator | MessageGroup)[] = [];
     let lastDate: string | null = null;
@@ -696,6 +809,47 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     }
 
     this.chatGroups = groups;
+  }
+
+  private setupLinkPreviewSubscription(): void {
+    this.chatInputChanges$
+      .pipe(
+        debounceTime(350),
+        map((text) => this.extractFirstUrl(text)),
+        distinctUntilChanged(),
+        switchMap((url) => {
+          this.linkPreviewError = null;
+
+          if (!url) {
+            this.linkPreview = null;
+            this.linkPreviewLoading = false;
+            return of(null);
+          }
+
+          this.linkPreviewLoading = true;
+          this.linkPreview = null;
+          this.isLinkPreviewDismissed = false;
+
+          return this.linkPreviewService.getLinkPreview(url).pipe(
+            catchError(() => {
+              this.linkPreviewError = 'Не удалось загрузить предпросмотр ссылки';
+              return of(null);
+            }),
+            finalize(() => {
+              this.linkPreviewLoading = false;
+            })
+          );
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((preview) => {
+        this.linkPreview = preview;
+      });
+  }
+
+  private extractFirstUrl(text: string): string | null {
+    const token = this.linkifyService.findLinks(text).find((t) => t.type === 'url');
+    return token?.href ?? null;
   }
 
   private formatDateSeparator(date: Date): string {
@@ -1310,8 +1464,20 @@ export class CallRoomComponent implements OnInit, OnDestroy {
    */
   toggleMute(): void {
     // Если микрофон недоступен, пробуем получить доступ
-    if (this.microphoneStatus !== 'granted') {
+    if (this.microphRoobertatus !== 'granted') {
       this.requestMicrophoneAccess();
+      return;
+    }
+    if (this.pushToTalkEnabled) {
+      this.pushToTalkManualOverride = !this.pushToTalkManualOverride;
+
+      if (this.pushToTalkManualOverride) {
+        this.pushToTalkService.forceRelease();
+        this.applyPushToTalkMuteState(false);
+      } else {
+        const shouldMute = !this.pushToTalkHolding;
+        this.applyPushToTalkMuteState(shouldMute);
+      }
       return;
     }
     const newMuteState = this.webrtcService.toggleMute();
@@ -1529,6 +1695,31 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     this.attachPreviewStream();
   }
 
+  togglePreviewFullscreen(): void {
+    const videoElement = this.previewVideo?.nativeElement;
+    if (!videoElement) {
+      return;
+    }
+
+    // Получаем контейнер с видео и контролами (родительский элемент видео)
+    const videoContainer = videoElement.parentElement;
+    if (!videoContainer) {
+      return;
+    }
+
+    if (!document.fullscreenElement) {
+      // Входим в полноэкранный режим (весь контейнер с контролами)
+      videoContainer.requestFullscreen().catch((err) => {
+        console.error('[CallRoom] Error entering fullscreen:', err);
+      });
+    } else {
+      // Выходим из полноэкранного режима
+      document.exitFullscreen().catch((err) => {
+        console.error('[CallRoom] Error exiting fullscreen:', err);
+      });
+    }
+  }
+
   togglePreviewAudio(): void {
     if (!this.previewHasAudio || this.previewPeerId === 'local') {
       return;
@@ -1636,6 +1827,11 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  @HostListener('document:fullscreenchange')
+  handleFullscreenChange(): void {
+    this.previewIsFullscreen = !!document.fullscreenElement;
+  }
+
   isCurrentParticipant(participant: RoomParticipant): boolean {
     return this.currentUser ? participant.id === this.currentUser.id : false;
   }
@@ -1660,7 +1856,7 @@ export class CallRoomComponent implements OnInit, OnDestroy {
   isParticipantMuted(participant: RoomParticipant): boolean {
     if (this.isCurrentParticipant(participant)) {
       // Если микрофон недоступен, показываем как замьюченный
-      if (this.microphoneStatus !== 'granted') {
+      if (this.microphRoobertatus !== 'granted') {
         return true;
       }
       return this.isMuted;
@@ -1677,11 +1873,21 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     return peer ? peer.isScreenSharing : false;
   }
 
+  get pushToTalkStatusLabel(): string {
+    if (this.pushToTalkManualOverride) {
+      return 'Закреплено';
+    }
+    if (this.pushToTalkHolding) {
+      return 'Активно';
+    }
+    return 'Ожидание';
+  }
+
   /**
    * Получение текста тултипа для кнопки микрофона
    */
   getMicrophoneTooltip(): string {
-    switch (this.microphoneStatus) {
+    switch (this.microphRoobertatus) {
       case 'pending':
         return 'Ожидается доступ к микрофону...';
       case 'denied':
@@ -1689,6 +1895,13 @@ export class CallRoomComponent implements OnInit, OnDestroy {
       case 'not-found':
         return 'Микрофон не найден. Нажмите, чтобы попробовать снова';
       case 'granted':
+        if (this.pushToTalkEnabled) {
+          if (this.pushToTalkManualOverride) {
+            return 'Микрофон закреплён. Нажмите, чтобы вернуться к удержанию';
+          }
+          const shortcut = this.pushToTalkShortcutLabel || 'выбранную комбинацию';
+          return `Удерживайте ${shortcut}, чтобы говорить`;
+        }
         return this.isMuted ? 'Включить микрофон' : 'Выключить микрофон';
       default:
         return 'Микрофон';
@@ -1699,14 +1912,14 @@ export class CallRoomComponent implements OnInit, OnDestroy {
    * Проверка, ждём ли мы доступ к микрофону
    */
   get isMicrophonePending(): boolean {
-    return this.microphoneStatus === 'pending';
+    return this.microphRoobertatus === 'pending';
   }
 
   /**
    * Проверка, есть ли проблема с микрофоном
    */
   get hasMicrophoneIssue(): boolean {
-    return this.microphoneStatus === 'denied' || this.microphoneStatus === 'not-found';
+    return this.microphRoobertatus === 'denied' || this.microphRoobertatus === 'not-found';
   }
 
   // Media Viewer Logic
@@ -1732,6 +1945,17 @@ export class CallRoomComponent implements OnInit, OnDestroy {
           }
         }
       }
+
+      // Add link preview images to gallery
+      if (msg.linkPreview && msg.linkPreview.type === 'image' && msg.linkPreview.url) {
+        items.push({
+          url: msg.linkPreview.url,
+          type: 'image',
+          senderName: msg.user.displayName || msg.user.username,
+          sentAt: new Date(msg.createdAt),
+          filename: msg.linkPreview.siteName || 'Link Image',
+        });
+      }
     }
     this.mediaGalleryItems = items;
   }
@@ -1753,14 +1977,29 @@ export class CallRoomComponent implements OnInit, OnDestroy {
     sentAt: Date | string,
     filename: string
   ): void {
+    const isLocalFile = !url.startsWith('http');
+    const finalUrl = isLocalFile ? this.getDownloadUrl(url) + '?inline=true' : url;
+
     this.selectedMediaItem = {
-      url: this.getDownloadUrl(url) + '?inline=true',
-      type: this.isImage(type) ? 'image' : 'video',
+      url: finalUrl,
+      type: this.isImage(type) || type === 'image' ? 'image' : 'video',
       senderName,
       sentAt: new Date(sentAt),
       filename,
     };
     this.showMediaViewer = true;
+  }
+
+  openLinkPreviewMedia(msg: ChatMessage): void {
+    if (!msg.linkPreview || msg.linkPreview.type !== 'image' || !msg.linkPreview.url) return;
+
+    this.openMediaViewer(
+      msg.linkPreview.url,
+      'image',
+      msg.user.displayName || msg.user.username,
+      msg.createdAt,
+      msg.linkPreview.siteName || 'Link Image'
+    );
   }
 
   closeMediaViewer(): void {
@@ -1774,6 +2013,54 @@ export class CallRoomComponent implements OnInit, OnDestroy {
 
   isVideo(mimeType: string): boolean {
     return mimeType.startsWith('video/');
+  }
+
+  getMediaFiles(files?: any[]): any[] {
+    if (!files) return [];
+    return files.filter((f) => this.isImage(f.type) || this.isVideo(f.type));
+  }
+
+  getMediaGridClass(count: number): string {
+    switch (count) {
+      case 1:
+        return 'grid-cols-1 max-w-[480px]';
+      case 2:
+        return 'grid-cols-2 max-w-[600px]';
+      case 3:
+        return 'grid-cols-2 max-w-[600px]';
+      case 4:
+        return 'grid-cols-2 max-w-[600px]';
+      default:
+        return 'grid-cols-3 max-w-[800px]';
+    }
+  }
+
+  getMediaItemClass(index: number, count: number, file: any): string {
+    const isVideo = this.isVideo(file.type);
+
+    if (count === 1) {
+      // Для одного файла: видео 16:9, изображение адаптивное
+      return isVideo ? 'aspect-video w-full' : 'w-full h-auto max-h-[500px]';
+    }
+
+    if (count === 2) {
+      // Два файла: 4:3
+      return 'aspect-[4/3]';
+    }
+
+    if (count === 3) {
+      // Три файла: первый широкий сверху
+      if (index === 0) return 'col-span-2 aspect-[21/9]';
+      return 'aspect-[4/3]';
+    }
+
+    if (count === 4) {
+      // Четыре файла: 2x2, 16:9
+      return 'aspect-video';
+    }
+
+    // 5 и более: квадраты
+    return 'aspect-square';
   }
 
   /**

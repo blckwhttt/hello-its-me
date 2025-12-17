@@ -9,7 +9,7 @@ import { isPlatformBrowser } from '@angular/common';
   providedIn: 'root',
 })
 export class VolumePreferencesService {
-  private readonly storageKey = 'helloitsme:volume-preferences:v1';
+  private readonly storageKey = 'twine:volume-preferences:v1';
   private readonly defaultVolume = 100;
   private readonly cache = new Map<string, number>();
   private readonly isBrowser: boolean;

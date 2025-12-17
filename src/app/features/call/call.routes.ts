@@ -4,6 +4,10 @@ export const callRoutes: Routes = [
   {
     path: ':roomId',
     loadComponent: () => import('./call-room/call-room.component').then((m) => m.CallRoomComponent),
+    data: {
+      title: 'Комната',
+      description: 'Звонок, чат и демонстрация экрана в комнате'
+    },
     children: [
       {
         path: 'settings',

@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "0.2.1",
   "description": "Communication became quality, convenient, and free.",
-  "author": "Hello, it's me",
+  "author": "Twine",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -64,8 +64,9 @@
   },
   "main": "main.js",
   "build": {
-    "appId": "com.helloitsme.app",
-    "productName": "Hello, it's me",
+    "appId": "com.twine.app",
+    "productName": "Twine",
+    "executableName": "twine",
     "npmRebuild": false,
     "directories": {
       "output": "dist_electron"
@@ -82,30 +83,28 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/logo.png"
+      "icon": "public/logo/logo.ico"
     },
     "asar": true,
     "asarUnpack": [],
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "artifactName": "HelloitsmeSetup.${ext}",
+      "oneClick": true,
+      "artifactName": "twineSetup.${ext}",
       "perMachine": true,
-      "installerIcon": "public/favicons/favicon.ico",
-      "installerHeaderIcon": "public/favicons/favicon.ico",
-      "uninstallerIcon": "public/favicons/favicon.ico",
+      "installerIcon": "public/logo/logo.ico",
+      "installerHeaderIcon": "public/logo/logo.ico",
+      "uninstallerIcon": "public/logo/logo.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Hello, it's me",
+      "shortcutName": "Twine",
       "runAfterFinish": true,
-      "menuCategory": "Helloitsme",
       "include": "build/installer.nsh"
     },
     "publish": [
       {
         "provider": "github",
         "owner": "blckwhttt",
-        "repo": "hello-its-me"
+        "repo": "Twine"
       }
     ]
   }

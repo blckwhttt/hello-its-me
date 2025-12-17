@@ -1,17 +1,4 @@
-const { contextBridge, ipcRenderer, desktopCapturer } = require('electron');
-
-const imageToDataUrl = (image) => {
-  if (!image || image.isEmpty()) {
-    return null;
-  }
-
-  try {
-    return image.toDataURL();
-  } catch (error) {
-    console.error('[Electron preload] Failed to convert nativeImage to data URL', error);
-    return null;
-  }
-};
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
@@ -25,20 +12,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     } = options ?? {};
 
     try {
-      const sources = await desktopCapturer.getSources({
+      return await ipcRenderer.invoke('desktop-capturer-get-sources', {
         types,
         thumbnailSize,
         fetchWindowIcons,
       });
-
-      return sources.map((source) => ({
-        id: source.id,
-        name: source.name,
-        type: source.id.startsWith('screen:') ? 'screen' : 'window',
-        displayId: source.display_id ?? null,
-        thumbnail: imageToDataUrl(source.thumbnail),
-        appIcon: imageToDataUrl(source.appIcon),
-      }));
     } catch (error) {
       console.error('[Electron preload] Failed to fetch screen sources', error);
       throw error;

@@ -1,10 +1,53 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, session, ipcMain, desktopCapturer } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
 
 let win;
 let splash;
+
+const imageToDataUrl = (image) => {
+  if (!image || image.isEmpty()) {
+    return null;
+  }
+
+  try {
+    return image.toDataURL();
+  } catch (error) {
+    console.error('[Electron main] Failed to convert nativeImage to data URL', error);
+    return null;
+  }
+};
+
+function registerDesktopCapturerHandler() {
+  ipcMain.handle('desktop-capturer-get-sources', async (_event, options = {}) => {
+    const {
+      types = ['screen', 'window'],
+      thumbnailSize = { width: 480, height: 270 },
+      fetchWindowIcons = true,
+    } = options ?? {};
+
+    try {
+      const sources = await desktopCapturer.getSources({
+        types,
+        thumbnailSize,
+        fetchWindowIcons,
+      });
+
+      return sources.map((source) => ({
+        id: source.id,
+        name: source.name,
+        type: source.id.startsWith('screen:') ? 'screen' : 'window',
+        displayId: source.display_id ?? null,
+        thumbnail: imageToDataUrl(source.thumbnail),
+        appIcon: imageToDataUrl(source.appIcon),
+      }));
+    } catch (error) {
+      console.error('[Electron main] Failed to fetch screen sources', error);
+      throw error;
+    }
+  });
+}
 
 function createSplashWindow() {
   splash = new BrowserWindow({
@@ -13,7 +56,7 @@ function createSplashWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    icon: path.join(__dirname, 'public/logo.png'),
+    icon: path.join(__dirname, 'public/logo/logo-icon.svg'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -31,7 +74,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, 'public/logo.png'),
+    icon: path.join(__dirname, 'public/logo/logo-icon.svg'),
     show: false, // Не показываем сразу, покажем после загрузки
     webPreferences: {
       nodeIntegration: false,
@@ -83,7 +126,7 @@ function setupSessionInterceptors() {
   session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
     details.requestHeaders['Origin'] = 'http://localhost:4200';
     // Добавляем секретный заголовок для защиты от CSRF
-    details.requestHeaders['X-App-Source'] = 'helloitsme-client';
+    details.requestHeaders['X-App-Source'] = 'twine-client';
     callback({ requestHeaders: details.requestHeaders });
   });
 
@@ -121,6 +164,7 @@ function setupSessionInterceptors() {
 }
 
 app.on('ready', () => {
+  registerDesktopCapturerHandler();
   setupSessionInterceptors();
   createSplashWindow();
 
@@ -167,7 +211,9 @@ autoUpdater.on('update-not-available', (info) => {
 autoUpdater.on('error', (err) => {
   console.log('Error in auto-updater. ' + err);
   if (splash && !splash.isDestroyed()) {
-    splash.webContents.send('error', err);
+    // Не показываем ошибку пользователю, просто продолжаем загрузку
+    // как будто обновлений нет
+    splash.webContents.send('update-not-available');
   }
 });
 

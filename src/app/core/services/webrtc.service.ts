@@ -62,7 +62,37 @@ type ChromeDesktopAudioConstraint = MediaTrackConstraints & {
   };
 };
 
-export type MicrophoneStatus = 'pending' | 'granted' | 'denied' | 'not-found';
+export type MicrophRoobertatus = 'pending' | 'granted' | 'denied' | 'not-found';
+
+export type CommunicationMode = 'auto' | 'push-to-talk';
+
+export interface PushToTalkShortcut {
+  code: string;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  metaKey: boolean;
+}
+
+export interface CommunicationSettings {
+  mode: CommunicationMode;
+  shortcut: PushToTalkShortcut;
+  releaseDelayMs: number;
+}
+
+const DEFAULT_PUSH_TO_TALK_SHORTCUT: PushToTalkShortcut = {
+  code: 'Space',
+  ctrlKey: true,
+  altKey: false,
+  shiftKey: false,
+  metaKey: false,
+};
+
+const DEFAULT_COMMUNICATION_SETTINGS: CommunicationSettings = {
+  mode: 'auto',
+  shortcut: DEFAULT_PUSH_TO_TALK_SHORTCUT,
+  releaseDelayMs: 200,
+};
 
 @Injectable({
   providedIn: 'root',
@@ -79,7 +109,7 @@ export class WebrtcService {
   // Выбранное устройство вывода
   private selectedAudioOutputId$ = new BehaviorSubject<string>('default');
   // Статус доступа к микрофону
-  private microphoneStatus$ = new BehaviorSubject<MicrophoneStatus>('pending');
+  private microphRoobertatus$ = new BehaviorSubject<MicrophRoobertatus>('pending');
 
   // Peer connections для каждого участника
   private peerConnections = new Map<string, PeerConnectionData>();
@@ -99,10 +129,13 @@ export class WebrtcService {
 
   private readonly STORAGE_KEY = 'webrtc_audio_settings';
   private readonly DEVICES_STORAGE_KEY = 'webrtc_selected_devices';
+  private readonly COMMUNICATION_STORAGE_KEY = 'webrtc_communication_settings';
 
   // Настройки обработки аудио
   private audioProcessingSettings = this.loadAudioSettings();
   private selectedDevices = this.loadSelectedDevices();
+  private communicationSettings = this.loadCommunicationSettings();
+  private communicationSettings$ = new BehaviorSubject<CommunicationSettings>(this.communicationSettings);
 
   constructor(private electronService: ElectronService) {}
 
@@ -145,6 +178,69 @@ export class WebrtcService {
     };
   }
 
+  private loadCommunicationSettings(): CommunicationSettings {
+    try {
+      const saved = localStorage.getItem(this.COMMUNICATION_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return this.normalizeCommunicationSettings(parsed);
+      }
+    } catch (e) {
+      console.warn('[WebRTC] Failed to load communication settings', e);
+    }
+    return this.getDefaultCommunicationSettings();
+  }
+
+  private getDefaultCommunicationSettings(): CommunicationSettings {
+    return {
+      mode: DEFAULT_COMMUNICATION_SETTINGS.mode,
+      releaseDelayMs: DEFAULT_COMMUNICATION_SETTINGS.releaseDelayMs,
+      shortcut: { ...DEFAULT_COMMUNICATION_SETTINGS.shortcut },
+    };
+  }
+
+  private normalizeCommunicationSettings(
+    settings: Partial<CommunicationSettings> | null | undefined
+  ): CommunicationSettings {
+    const normalizedShortcut = {
+      ...DEFAULT_PUSH_TO_TALK_SHORTCUT,
+      ...(settings?.shortcut ?? {}),
+    };
+
+    const releaseDelayMs = this.normalizeReleaseDelay(settings?.releaseDelayMs);
+
+    return {
+      ...this.getDefaultCommunicationSettings(),
+      ...(settings ?? {}),
+      shortcut: normalizedShortcut,
+      releaseDelayMs,
+    };
+  }
+
+  private normalizeReleaseDelay(value: number | undefined): number {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return DEFAULT_COMMUNICATION_SETTINGS.releaseDelayMs;
+    }
+    return Math.min(1000, Math.max(0, Math.round(value)));
+  }
+
+  private cloneCommunicationSettings(
+    settings: CommunicationSettings
+  ): CommunicationSettings {
+    return {
+      ...settings,
+      shortcut: { ...settings.shortcut },
+    };
+  }
+
+  private persistCommunicationSettings(settings: CommunicationSettings): void {
+    try {
+      localStorage.setItem(this.COMMUNICATION_STORAGE_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('[WebRTC] Failed to save communication settings', e);
+    }
+  }
+
   private debugLog(...args: unknown[]): void {
     console.log('[WebRTC Debug]', ...args);
   }
@@ -169,8 +265,12 @@ export class WebrtcService {
       });
 
       this.localAudioStream$.next(stream);
-      this.microphoneStatus$.next('granted');
+      this.microphRoobertatus$.next('granted');
       const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        const shouldBeMuted = this.isMuted$.value;
+        audioTrack.enabled = !shouldBeMuted;
+      }
       this.debugLog('Local audio stream initialized', {
         label: audioTrack?.label,
         settings: audioTrack?.getSettings(),
@@ -182,11 +282,11 @@ export class WebrtcService {
       
       // Определяем причину ошибки
       if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
-        this.microphoneStatus$.next('denied');
+        this.microphRoobertatus$.next('denied');
       } else if (error?.name === 'NotFoundError' || error?.name === 'DevicesNotFoundError') {
-        this.microphoneStatus$.next('not-found');
+        this.microphRoobertatus$.next('not-found');
       } else {
-        this.microphoneStatus$.next('denied');
+        this.microphRoobertatus$.next('denied');
       }
       
       return null;
@@ -197,7 +297,7 @@ export class WebrtcService {
    * Повторная попытка получить доступ к микрофону
    */
   async retryMicrophoneAccess(): Promise<MediaStream | null> {
-    this.microphoneStatus$.next('pending');
+    this.microphRoobertatus$.next('pending');
     return this.initializeAudioStream();
   }
 
@@ -241,6 +341,50 @@ export class WebrtcService {
    */
   getAudioProcessingSettings() {
     return { ...this.audioProcessingSettings };
+  }
+
+  /**
+   * Получение текущих настроек коммуникации
+   */
+  getCommunicationSettings(): CommunicationSettings {
+    return this.cloneCommunicationSettings(this.communicationSettings);
+  }
+
+  /**
+   * Поток изменений настроек коммуникации
+   */
+  get communicationSettingsChanges() {
+    return this.communicationSettings$.asObservable();
+  }
+
+  getDefaultPushToTalkShortcut(): PushToTalkShortcut {
+    return { ...DEFAULT_PUSH_TO_TALK_SHORTCUT };
+  }
+
+  /**
+   * Обновление настроек коммуникации
+   */
+  updateCommunicationSettings(update: Partial<CommunicationSettings>): void {
+    const nextShortcut = update.shortcut
+      ? {
+          ...this.communicationSettings.shortcut,
+          ...update.shortcut,
+        }
+      : this.communicationSettings.shortcut;
+
+    const nextSettings: CommunicationSettings = {
+      ...this.communicationSettings,
+      ...update,
+      shortcut: nextShortcut,
+      releaseDelayMs: this.normalizeReleaseDelay(
+        update.releaseDelayMs ?? this.communicationSettings.releaseDelayMs
+      ),
+    };
+
+    this.communicationSettings = nextSettings;
+    const snapshot = this.cloneCommunicationSettings(nextSettings);
+    this.communicationSettings$.next(snapshot);
+    this.persistCommunicationSettings(snapshot);
   }
 
   /**
@@ -372,19 +516,28 @@ export class WebrtcService {
    * Включение/выключение микрофона
    */
   toggleMute(): boolean {
+    const nextState = !this.isMuted$.value;
+    return this.setMuteState(nextState);
+  }
+
+  /**
+   * Принудительно установить состояние микрофона
+   */
+  setMuteState(muted: boolean): boolean {
     const audioStream = this.localAudioStream$.value;
-    if (audioStream) {
-      const audioTrack = audioStream.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
-      this.isMuted$.next(!audioTrack.enabled);
-      this.debugLog('Microphone toggled', {
+    const audioTrack = audioStream?.getAudioTracks()[0];
+
+    if (audioTrack) {
+      audioTrack.enabled = !muted;
+      this.debugLog('Microphone state updated', {
         enabled: audioTrack.enabled,
         readyState: audioTrack.readyState,
         muted: audioTrack.muted,
       });
-      return !audioTrack.enabled;
     }
-    return false;
+
+    this.isMuted$.next(muted);
+    return muted;
   }
 
   /**
@@ -653,7 +806,7 @@ export class WebrtcService {
     this.localScreenStream$.next(null);
     this.isMuted$.next(false);
     this.isScreenSharing$.next(false);
-    this.microphoneStatus$.next('pending');
+    this.microphRoobertatus$.next('pending');
 
     console.log('[WebRTC] All connections cleaned up');
   }
@@ -830,12 +983,12 @@ export class WebrtcService {
     return this.selectedAudioOutputId$.asObservable();
   }
 
-  get microphoneStatus() {
-    return this.microphoneStatus$.asObservable();
+  get microphRoobertatus() {
+    return this.microphRoobertatus$.asObservable();
   }
 
-  getMicrophoneStatusValue(): MicrophoneStatus {
-    return this.microphoneStatus$.value;
+  getMicrophRoobertatusValue(): MicrophRoobertatus {
+    return this.microphRoobertatus$.value;
   }
 
   getPeerConnections(): Map<string, PeerConnectionData> {

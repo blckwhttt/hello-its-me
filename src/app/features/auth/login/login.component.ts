@@ -1,12 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { PageMetaService } from '../../../core/services/page-meta.service';
 import { AuthLayoutComponent } from '../../../shared/components/auth-layout/auth-layout.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { NotificationComponent } from '../../../shared/components/notification/notification.component';
 import { LucideAngularModule, Mail, Lock, AlertCircle } from 'lucide-angular';
+
+import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 
 @Component({
   selector: 'app-login',
@@ -18,16 +21,18 @@ import { LucideAngularModule, Mail, Lock, AlertCircle } from 'lucide-angular';
     AuthLayoutComponent,
     ButtonComponent,
     NotificationComponent,
-    LucideAngularModule
+    LucideAngularModule,
+    FormInputComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   errorMessage: string = '';
   isLoading: boolean = false;
   showError = false;
+  submitted = false;
 
   readonly Mail = Mail;
   readonly Lock = Lock;
@@ -36,7 +41,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private pageMeta: PageMetaService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -44,7 +50,16 @@ export class LoginComponent {
     });
   }
 
+  ngOnInit(): void {
+    this.pageMeta.set({
+      title: 'Вход',
+      description: 'Войдите в Twine чтобы продолжить звонки и чаты',
+    });
+  }
+
   onSubmit(): void {
+    this.submitted = true;
+    
     if (this.loginForm.invalid) {
       Object.keys(this.loginForm.controls).forEach(key => {
         this.loginForm.get(key)?.markAsTouched();
@@ -62,7 +77,13 @@ export class LoginComponent {
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Неверный email или пароль';
+        if (error.status === 401) {
+          this.errorMessage = 'Неверная почта или пароль. Проверьте данные и попробуйте снова.';
+        } else if (error.status === 429) {
+          this.errorMessage = 'Слишком много попыток входа. Подождите немного и попробуйте снова.';
+        } else {
+          this.errorMessage = error.error?.message || 'Не удалось войти. Попробуйте позже.';
+        }
         this.showError = true;
       }
     });
@@ -78,36 +99,6 @@ export class LoginComponent {
 
   get password() {
     return this.loginForm.get('password');
-  }
-
-  getFieldError(fieldName: string): string {
-    const field = this.loginForm.get(fieldName);
-    if (!field || !field.errors || !field.touched) {
-      return '';
-    }
-
-    if (field.errors['required']) {
-      return fieldName === 'email' ? 'Email обязателен' : 'Пароль обязателен';
-    }
-    if (field.errors['email']) {
-      return 'Некорректный email';
-    }
-    if (field.errors['minlength']) {
-      return 'Минимум 8 символов';
-    }
-    
-    return '';
-  }
-
-  getInputClasses(fieldName: string): string {
-    const baseClasses = 'w-full pl-10 pr-4 py-2.5 bg-white/5 border rounded-[12px] text-white placeholder:text-white/30 transition-all duration-200 focus:outline-none focus:border-violet-500/30 focus:bg-[#16161f]';
-    const hasError = this.getFieldError(fieldName);
-    
-    if (hasError) {
-      return `${baseClasses} border-red-500/50 focus:border-red-500 pr-10`;
-    }
-    
-    return `${baseClasses} border-white/5`;
   }
 }
 

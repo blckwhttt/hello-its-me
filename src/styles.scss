@@ -1,14 +1,45 @@
 @import "tailwindcss";
 
 :root {
-    --bg-color: #131216;
+    --bg-color: #0A0A0C;
     --bg-dark: rgb(13, 13, 15);
+    --original-color: #5342D7;
+    --text-positive-light: #4CDB8D;
+    --text-positive: #13B95E;
+}
+
+@font-face {
+    font-family: "Roobert";
+    src: url("/fonts/Roobert_Regular.woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Roobert";
+    src: url("/fonts/Roobert_Medium.woff2");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Roobert";
+    src: url("/fonts/Roobert_Semibold.woff2");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Roobert";
+    src: url("/fonts/Roobert_Bold.woff2");
+    font-weight: 700;
+    font-style: normal;
 }
 
 @layer base {
     body {
-        font-family: "Onest", "Inter", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        @apply tracking-[-.02rem] bg-(--bg-color) text-white/90 antialiased;
+        font-family: "Roobert", "Inter", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        @apply tracking-[-.01rem] bg-(--bg-color) text-white/90 antialiased;
     }
 
     /* Headings */
@@ -102,11 +133,11 @@
     }
 
     .bg-gradient-primary {
-        @apply bg-gradient-to-r from-violet-600 to-violet-500;
+        @apply bg-linear-to-r from-violet-600 to-violet-500;
     }
 
     .bg-gradient-secondary {
-        @apply bg-gradient-to-r from-fuchsia-600 to-fuchsia-500;
+        @apply bg-linear-to-r from-fuchsia-600 to-fuchsia-500;
     }
 
     /* Glass effect */
@@ -145,7 +176,7 @@
     .text-color-link {
         color: #00a8ff;
     }
-    
+
     @keyframes wave {
 
         0%,
@@ -172,55 +203,55 @@
 
     /* Text gradients */
     .text-gradient-primary {
-        @apply bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent;
+        @apply bg-linear-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent;
     }
 
     .text-gradient-secondary {
-        @apply bg-gradient-to-r from-fuchsia-400 to-pink-400 bg-clip-text text-transparent;
+        @apply bg-linear-to-r from-fuchsia-400 to-pink-400 bg-clip-text text-transparent;
     }
 
     /* Animations */
     @keyframes fade-in {
-        from {
+        0% {
             opacity: 0;
         }
 
-        to {
+        100% {
             opacity: 1;
         }
     }
 
     @keyframes slide-in-right {
-        from {
+        0% {
             opacity: 0;
             transform: translateX(100%);
         }
 
-        to {
+        100% {
             opacity: 1;
             transform: translateX(0);
         }
     }
 
     @keyframes slide-in-down {
-        from {
+        0% {
             opacity: 0;
             transform: translateY(-100%);
         }
 
-        to {
+        100% {
             opacity: 1;
             transform: translateY(0);
         }
     }
 
     @keyframes scale-in {
-        from {
+        0% {
             opacity: 0;
             transform: scale(0.95);
         }
 
-        to {
+        100% {
             opacity: 1;
             transform: scale(1);
         }

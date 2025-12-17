@@ -2,24 +2,21 @@
   [isOpen]="isOpen"
   [customLayout]="true"
   [backdropClass]="'bg-black/60'"
-  [customClass]="'h-[85vh] max-w-[1340px]! bg-[#0f0e13] border border-white/5 rounded-[22px] shadow-2xl flex overflow-hidden'"
+  customWidth="1500px"
+  customHeight="88vh"
+  [customClass]="'bg-[#0f0e13] rounded-[34px] flex overflow-hidden'"
   (closed)="close()"
 >
   <div slot="custom" class="flex h-full w-full">
     <!-- Sidebar -->
-    <aside class="w-72 bg-white/2 border-r border-white/5 flex flex-col overflow-x-hidden">
-      <div class="p-8 border-b border-white/5">
-        <h2 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-          <div
-            class="size-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400"
-          >
-            <lucide-icon [img]="Settings" [size]="18"></lucide-icon>
-          </div>
+    <aside class="w-[290px] bg-black/15 px-3.5 border-r border-white/5 flex flex-col overflow-x-hidden relative">
+      <div class="px-4 py-5.5 border-b border-white/10">
+        <h2 class="text-[22px] font-semibold flex items-center gap-3 text-white/40">
           Настройки
         </h2>
       </div>
 
-      <nav class="flex-1 p-3 space-y-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <nav class="flex-1 mt-2 space-y-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
         @for (category of categories; track category.id) {
         <div class="flex flex-col gap-0.5">
           <div class="px-4 py-2 text-xs font-medium text-white/30 uppercase tracking-wide truncate">
@@ -59,51 +56,25 @@
         </div>
         }
       </nav>
-
-      <div class="p-4 border-t border-white/5">
-        <button
-          (click)="close()"
-          class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all font-medium group"
-        >
-          <lucide-icon [img]="LogOut" [size]="18" class="group-hover:-translate-x-1 transition-transform"></lucide-icon>
-          Закрыть настройки
-        </button>
-      </div>
     </aside>
 
     <!-- Content Area -->
-    <main class="flex-1 flex flex-col min-w-0 bg-[#0f0e13]">
-      <!-- Header -->
-      <div
-        class="h-25 px-10 flex items-center justify-between border-b border-white/5 bg-linear-to-b from-white/2 to-transparent"
-      >
+    <main class="flex-1 flex flex-col min-w-0 px-14 py-8 bg-[#0f0e13] overflow-y-auto custom-scrollbar">
+      <div class="flex flex-col gap-3 mb-10">
         @if (currentSection) {
-        <div>
-          <h3 class="text-2xl font-bold text-white tracking-tight">
-            {{ currentSection.title }}
-          </h3>
-          <p class="text-white/40 text-sm mt-2">
-            {{ currentSection.description }}
-          </p>
-        </div>
-        } @else {
-        <div>
-          <h3 class="text-2xl font-bold text-white tracking-tight">Настройки</h3>
-          <p class="text-white/40 text-sm mt-2">Выберите раздел для настройки</p>
-        </div>
-        }
-
-        <button
-          (click)="close()"
-          class="size-10 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all flex items-center justify-center"
-          title="Закрыть (Esc)"
-        >
-          <lucide-icon [img]="X" [size]="24"></lucide-icon>
-        </button>
+            <h3 class="text-[28px] font-bold text-white">
+              {{ currentSection.title }}
+            </h3>
+            <p class="text-white/40 text-[15px]">
+              {{ currentSection.description }}
+            </p>
+          } @else {
+            <h3 class="text-[26px] font-bold text-white">Настройки</h3>
+            <p class="text-white/40 text-base">Выберите раздел для настройки</p>
+          }
       </div>
-
       <!-- Scrollable Content -->
-      <div class="flex-1 overflow-y-auto px-10 py-7 custom-scrollbar">
+      <div class="flex-1">
           @switch (currentSection?.id) {
             @case ('audio') {
               <app-settings-audio />
@@ -116,6 +87,14 @@
             }
           }
       </div>
+      <button
+          (click)="close()"
+          class="absolute top-5 right-6 size-10 rounded-[14px] hover:bg-white/5 active:bg-white/10 text-white/30 hover:text-white transition-all flex items-center justify-center"
+          title="Закрыть (Esc)"
+          aria-label="Закрыть настройки (Escape)"
+        >
+          <lucide-icon [img]="X" [size]="22"></lucide-icon>
+        </button>
     </main>
   </div>
 </app-modal>

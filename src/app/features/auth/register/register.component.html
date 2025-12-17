@@ -5,149 +5,73 @@
   (closed)="onErrorClosed()"
 ></app-notification>
 
-<app-auth-layout
-  title="Hello, it's me"
-  footerText="Уже есть аккаунт?"
-  footerLink="/auth/login"
-  footerLinkText="Войти"
->
-  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-4">
-    <!-- Email -->
-    <div>
-      <label for="email" class="block text-sm font-medium text-white/70 mb-2">
-        Email
-      </label>
-      <div class="relative">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-          <lucide-icon [img]="Mail" [size]="20"></lucide-icon>
-        </div>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          placeholder="your@email.com"
-          [class]="getInputClasses('email')"
-        />
-        @if (getFieldError('email')) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">
-            <lucide-icon [img]="AlertCircle" [size]="20"></lucide-icon>
-          </div>
-        }
-      </div>
-      @if (getFieldError('email')) {
-        <p class="mt-2 text-sm text-red-400 flex items-center gap-1.5">
-          <span class="text-xs">⚠</span>
-          {{ getFieldError('email') }}
-        </p>
-      }
+<app-auth-layout footerText="Аккаунт уже есть, нужен вход" footerLink="/auth/login">
+  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col w-full">
+    <div class="flex flex-col items-center gap-[32px] w-full">
+      <app-form-input
+        class="w-full"
+        label="Ваш никнейм"
+        type="text"
+        placeholder="Steve"
+        inputId="username"
+        name="username"
+        [control]="$any(registerForm.get('username'))"
+        [submitted]="submitted"
+      ></app-form-input>
+
+      <app-form-input
+        class="w-full"
+        label="Ваша почта"
+        type="email"
+        placeholder="hello@twinerooms.com"
+        inputId="email"
+        name="email"
+        [control]="$any(registerForm.get('email'))"
+        [submitted]="submitted"
+      ></app-form-input>
+
+      <app-form-input
+        class="w-full"
+        label="Ваш пароль"
+        type="password"
+        placeholder="qwerty12345"
+        inputId="password"
+        name="password"
+        [control]="$any(registerForm.get('password'))"
+        [submitted]="submitted"
+      ></app-form-input>
     </div>
 
-    <!-- Username -->
-    <div>
-      <label for="username" class="block text-sm font-medium text-white/70 mb-2">
-        Username <span class="text-xs text-white/30">(уникальный)</span>
-      </label>
-      <div class="relative">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-          <lucide-icon [img]="User" [size]="20"></lucide-icon>
-        </div>
-        <input
-          id="username"
-          type="text"
-          formControlName="username"
-          placeholder="username"
-          [class]="getInputClasses('username')"
-        />
-        @if (getFieldError('username')) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">
-            <lucide-icon [img]="AlertCircle" [size]="20"></lucide-icon>
-          </div>
-        }
-      </div>
-      @if (getFieldError('username')) {
-        <p class="mt-2 text-sm text-red-400 flex items-center gap-1.5">
-          <span class="text-xs">⚠</span>
-          {{ getFieldError('username') }}
-        </p>
-      }
-    </div>
-
-    <!-- Password -->
-    <div>
-      <label for="password" class="block text-sm font-medium text-white/70 mb-2">
-        Пароль
-      </label>
-      <div class="relative">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-          <lucide-icon [img]="Lock" [size]="20"></lucide-icon>
-        </div>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          placeholder="••••••••"
-          [class]="getInputClasses('password')"
-        />
-        @if (getFieldError('password')) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">
-            <lucide-icon [img]="AlertCircle" [size]="20"></lucide-icon>
-          </div>
-        }
-      </div>
-      @if (getFieldError('password')) {
-        <p class="mt-2 text-sm text-red-400 flex items-center gap-1.5">
-          <span class="text-xs">⚠</span>
-          {{ getFieldError('password') }}
-        </p>
-      }
-    </div>
-
-    <!-- Confirm Password -->
-    <div>
-      <label for="confirmPassword" class="block text-sm font-medium text-white/70 mb-2">
-        Подтвердите пароль
-      </label>
-      <div class="relative">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-          <lucide-icon [img]="Lock" [size]="20"></lucide-icon>
-        </div>
-        <input
-          id="confirmPassword"
-          type="password"
-          formControlName="confirmPassword"
-          placeholder="••••••••"
-          [class]="getInputClasses('confirmPassword')"
-        />
-        @if (getFieldError('confirmPassword')) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">
-            <lucide-icon [img]="AlertCircle" [size]="20"></lucide-icon>
-          </div>
-        }
-      </div>
-      @if (getFieldError('confirmPassword')) {
-        <p class="mt-2 text-sm text-red-400 flex items-center gap-1.5">
-          <span class="text-xs">⚠</span>
-          {{ getFieldError('confirmPassword') }}
-        </p>
-      }
-    </div>
-
-    <!-- Submit Button -->
-    <div class="pt-2">
-      <app-button
-        type="submit"
-        variant="primary"
-        size="lg"
-        [fullWidth]="true"
-        [loading]="isLoading"
-        [disabled]="isLoading"
+    <button
+      type="submit"
+      [disabled]="isLoading || registerForm.invalid"
+      class="mt-[52px] w-full flex justify-center text-center items-center gap-[16px] text-[24px] text-white/90 rounded-full bg-(--original-color) h-[66px] font-semibold transition-all hover:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:scale-[1.01]"
+    >
+      {{ isLoading ? 'Создание...' : 'Создать аккаунт' }}
+      <svg
+        *ngIf="!isLoading"
+        width="18"
+        height="20"
+        viewBox="0 0 18 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        class="transition-transform group-hover:translate-x-0.5"
       >
-        @if (isLoading) {
-          Регистрация...
-        } @else {
-          Зарегистрироваться
-        }
-      </app-button>
-    </div>
+        <g clip-path="url(#clip0_32_215)">
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M9 2L7.7085 3.25376L14.5548 10.1H0V11.9H14.5548L7.7274 18.7273L9 20C12.2949 16.7051 14.8464 14.1536 18 11L9 2Z"
+            fill="white"
+            fill-opacity="0.9"
+          />
+        </g>
+        <defs>
+          <clipPath id="clip0_32_215">
+            <rect width="18" height="20" fill="white" />
+          </clipPath>
+        </defs>
+      </svg>
+    </button>
   </form>
 </app-auth-layout>

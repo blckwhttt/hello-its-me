@@ -14,11 +14,19 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    data: {
+      title: 'Рабочая область',
+      description: 'Комнаты, звонки и демонстрация экрана в Twine'
+    },
     canActivate: [AuthGuard]
   },
   {
     path: 'call',
     loadChildren: () => import('./features/call/call.routes').then(m => m.callRoutes),
+    data: {
+      title: 'Комната',
+      description: 'Голосовые и видеозвонки в комнате Twine'
+    },
     canActivate: [AuthGuard]
   },
   {

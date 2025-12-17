@@ -12,4 +12,5 @@ export { WaveBackgroundComponent } from './wave-background/wave-background.compo
 export { ContextMenuComponent } from './context-menu/context-menu.component';
 export type { ContextMenuItem, ContextMenuPosition } from './context-menu/context-menu.component';
 export { ContextMenuBuilder } from './context-menu/context-menu.builder';
+export { LinkPreviewComponent } from './link-preview/link-preview.component';
 

@@ -1,6 +1,6 @@
-# 👋 Hello, it's me! (Frontend)
+# 👋 Twine! (Frontend)
 
-Welcome to the frontend repository of **Hello, it's me** — a next-generation messenger built primarily for gamers who value quality, speed, and freedom.
+Welcome to the frontend repository of **Twine** — a next-generation messenger built primarily for gamers who value quality, speed, and freedom.
 
 We are building a space where communication is crystal clear, completely free, and void of harsh restrictions. No paywalls for higher bitrate, no artificial limits — just you and your squad.
 
@@ -10,13 +10,13 @@ We believe that "gamer aesthetic" doesn't have to mean aggressive red accents or
 - **Minimalism & Modernity**: A clean interface aimed at performance and comfort.
 - **Violet Vibes**: We love the violet spectrum. It’s deep, calming, and stylish.
 - **Smart UX**: We don't leave you guessing. Expect helpful tooltips and clear explanations for complex audio/video settings.
-- **Onest Typography**: Using the *Onest* font for a friendly yet modern look that keeps things readable during long sessions.
+- **Roobert Typography**: Using the *Roobert* font for a friendly yet modern look that keeps things readable during long sessions.
 - **Glassmorphism**: Subtle blur effects and smooth animations (scale/opacity) that make the app feel alive without killing your GPU.
 
 ## 🛠 Under the Hood
 We use a cutting-edge stack to ensure low latency and high stability:
 
-- **Angular 18** (Standalone) — Modern architecture without legacy baggage.
+- **Angular 20** (Standalone) — Modern architecture without legacy baggage.
 - **Tailwind CSS 4** — For rapid, consistent styling.
 - **Electron** — Delivering a native desktop experience.
 - **WebRTC** — The engine behind our high-quality audio and video.

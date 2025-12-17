@@ -1,12 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { PageMetaService } from '../../../core/services/page-meta.service';
 import { AuthLayoutComponent } from '../../../shared/components/auth-layout/auth-layout.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { NotificationComponent } from '../../../shared/components/notification/notification.component';
 import { LucideAngularModule, Mail, User, Lock, AlertCircle } from 'lucide-angular';
+
+import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 
 @Component({
   selector: 'app-register',
@@ -18,16 +21,18 @@ import { LucideAngularModule, Mail, User, Lock, AlertCircle } from 'lucide-angul
     AuthLayoutComponent,
     ButtonComponent,
     NotificationComponent,
-    LucideAngularModule
+    LucideAngularModule,
+    FormInputComponent
   ],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss']
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   registerForm: FormGroup;
   errorMessage: string = '';
   isLoading: boolean = false;
   showError = false;
+  submitted = false;
 
   readonly Mail = Mail;
   readonly User = User;
@@ -37,31 +42,26 @@ export class RegisterComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private pageMeta: PageMetaService
   ) {
     this.registerForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(30), Validators.pattern(/^[a-zA-Z0-9_-]+$/)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', [Validators.required]]
-    }, { validators: this.passwordMatchValidator });
+      password: ['', [Validators.required, Validators.minLength(8)]]
+    });
   }
 
-  passwordMatchValidator(form: FormGroup) {
-    const password = form.get('password');
-    const confirmPassword = form.get('confirmPassword');
-    
-    if (password && confirmPassword && password.value !== confirmPassword.value) {
-      confirmPassword.setErrors({ passwordMismatch: true });
-    } else {
-      if (confirmPassword?.hasError('passwordMismatch')) {
-        confirmPassword.setErrors(null);
-      }
-    }
-    return null;
+  ngOnInit(): void {
+    this.pageMeta.set({
+      title: 'Регистрация',
+      description: 'Создайте аккаунт Twine для звонков и комнат',
+    });
   }
 
   onSubmit(): void {
+    this.submitted = true;
+    
     if (this.registerForm.invalid) {
       Object.keys(this.registerForm.controls).forEach(key => {
         this.registerForm.get(key)?.markAsTouched();
@@ -81,10 +81,14 @@ export class RegisterComponent {
       },
       error: (error) => {
         this.isLoading = false;
-        if (error.error?.message) {
-          this.errorMessage = error.error.message;
+        if (error.status === 409) {
+          this.errorMessage = 'Такая почта или никнейм уже зарегистрированы. Попробуйте другие.';
+        } else if (error.status === 400) {
+          this.errorMessage = error.error?.message || 'Проверьте правильность введённых данных.';
+        } else if (error.status === 429) {
+          this.errorMessage = 'Слишком много попыток регистрации. Подождите немного.';
         } else {
-          this.errorMessage = 'Не удалось зарегистрироваться. Попробуйте снова.';
+          this.errorMessage = error.error?.message || 'Не удалось создать аккаунт. Попробуйте позже.';
         }
         this.showError = true;
       }
@@ -106,54 +110,4 @@ export class RegisterComponent {
   get password() {
     return this.registerForm.get('password');
   }
-
-  get confirmPassword() {
-    return this.registerForm.get('confirmPassword');
-  }
-
-  getFieldError(fieldName: string): string {
-    const field = this.registerForm.get(fieldName);
-    if (!field || !field.errors || !field.touched) {
-      return '';
-    }
-
-    if (field.errors['required']) {
-      const labels: any = {
-        email: 'Email обязателен',
-        username: 'Username обязателен',
-        password: 'Пароль обязателен',
-        confirmPassword: 'Подтверждение обязательно'
-      };
-      return labels[fieldName] || 'Поле обязательно';
-    }
-    if (field.errors['email']) {
-      return 'Некорректный email';
-    }
-    if (field.errors['minlength']) {
-      return fieldName === 'username' ? 'Минимум 3 символа' : 'Минимум 8 символов';
-    }
-    if (field.errors['maxlength']) {
-      return 'Максимум 30 символов';
-    }
-    if (field.errors['pattern']) {
-      return 'Только буквы, цифры, _ и -';
-    }
-    if (field.errors['passwordMismatch']) {
-      return 'Пароли не совпадают';
-    }
-    
-    return '';
-  }
-
-  getInputClasses(fieldName: string): string {
-    const baseClasses = 'w-full pl-10 pr-4 py-2.5 bg-white/5 border rounded-[12px] text-white placeholder:text-white/30 transition-all duration-200 focus:outline-none focus:border-violet-500/30 focus:bg-[#16161f]';
-    const hasError = this.getFieldError(fieldName);
-    
-    if (hasError) {
-      return `${baseClasses} border-red-500/50 focus:border-red-500 pr-10`;
-    }
-    
-    return `${baseClasses} border-white/5`;
-  }
 }
-

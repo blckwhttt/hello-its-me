@@ -19,12 +19,7 @@ import { WaveBackgroundComponent } from '../wave-background/wave-background.comp
       <div class="relative z-10 container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <!-- Logo & Title -->
-          <app-logo 
-            [size]="38" 
-            [text]="title"
-            textClass="text-3xl"
-            [showBeta]="true"
-          ></app-logo>
+          <app-logo></app-logo>
           
           <!-- User Info & Actions -->
           @if (showUserInfo && user) {
@@ -55,7 +50,6 @@ import { WaveBackgroundComponent } from '../wave-background/wave-background.comp
   styles: []
 })
 export class PageHeaderComponent {
-  @Input() title = 'Hello, it\'s me';
   @Input() showUserInfo = false;
   @Input() showLogout = false;
   @Input() user: any = null;

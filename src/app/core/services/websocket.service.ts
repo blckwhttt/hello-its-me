@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
+import type { LinkPreview } from '../models/link-preview.model';
 
 export interface RoomParticipant extends Partial<User> {
   id: string; // Mapped from userId
@@ -33,6 +34,7 @@ export interface ChatMessage {
     size: number;
     type: string;
   }[];
+  linkPreview?: LinkPreview | null;
   createdAt: Date;
   user: User;
 }
@@ -459,7 +461,8 @@ export class WebsocketService {
   sendChatMessage(
     roomId: string,
     content: string,
-    files?: { url: string; name: string; size: number; type: string }[]
+    files?: { url: string; name: string; size: number; type: string }[],
+    disableLinkPreview?: boolean
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.chatSocket) {
@@ -467,7 +470,7 @@ export class WebsocketService {
         return;
       }
 
-      this.chatSocket.emit('send-message', { roomId, content, files }, (response: any) => {
+      this.chatSocket.emit('send-message', { roomId, content, files, disableLinkPreview }, (response: any) => {
         if (response?.success) {
           resolve();
         } else {
