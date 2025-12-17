@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain, desktopCapturer } = require('electron');
+const { app, BrowserWindow, session, ipcMain, desktopCapturer, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
@@ -82,6 +82,29 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
     autoHideMenuBar: true, // Hide the menu bar
+  });
+
+  // Обработка внешних ссылок (target="_blank")
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+
+  // Обработка навигации внутри окна
+  win.webContents.on('will-navigate', (event, navigationUrl) => {
+    // Разрешаем навигацию только по локальным путям или dev-server
+    const isDev = process.argv.includes('--dev');
+    const isLocal = isDev
+      ? navigationUrl.startsWith('http://localhost:4200')
+      : navigationUrl.startsWith('file://');
+
+    if (!isLocal && (navigationUrl.startsWith('http:') || navigationUrl.startsWith('https:'))) {
+      event.preventDefault();
+      shell.openExternal(navigationUrl);
+    }
   });
 
   // Check if we are in development mode

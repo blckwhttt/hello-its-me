@@ -2,9 +2,9 @@
 
 !macro preInit
   !ifdef APP_64
-    StrCpy $INSTDIR "$PROGRAMFILES64\Helloitsme"
+    StrCpy $INSTDIR "$PROGRAMFILES64\Twine"
   !else
-    StrCpy $INSTDIR "$PROGRAMFILES\Helloitsme"
+    StrCpy $INSTDIR "$PROGRAMFILES\Twine"
   !endif
 !macroend
 
@@ -18,7 +18,7 @@
 
   ${GetParent} "$INSTDIR" $R1
   ${GetFileName} "$R1" $R2
-  StrCmp $R2 "Helloitsme" 0 custom_done
+  StrCmp $R2 "Twine" 0 custom_done
 
   StrCpy $INSTDIR "$R1"
 

@@ -131,7 +131,7 @@ import { EmbedPlayerComponent } from '../embed-player/embed-player.component';
         <iframe
           [src]="videoUrl"
           class="size-full"
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
           frameborder="0"
         ></iframe>
@@ -252,7 +252,11 @@ export class LinkPreviewComponent {
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       const videoId = this.extractYoutubeId(url);
       if (videoId) {
-        embedSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        const origin = typeof window !== 'undefined' && window.location.protocol === 'file:' 
+          ? 'http://localhost' 
+          : (typeof window !== 'undefined' ? window.location.origin : '');
+          
+        embedSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${origin}`;
       }
     }
 

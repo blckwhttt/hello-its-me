@@ -135,12 +135,12 @@ export interface MediaItem {
                 <img 
                   [src]="currentItem.url" 
                   [alt]="currentItem.filename"
-                  class="max-w-full max-h-screen object-contain select-none"
+                  class="max-w-[90vw] max-h-[85vh] object-contain select-none rounded-lg shadow-2xl"
                   draggable="false"
                 >
               </div>
             } @else {
-              <div class="max-w-full max-h-[78vh] aspect-video rounded-xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+              <div class="max-w-[90vw] max-h-[85vh] w-auto aspect-video rounded-xl shadow-2xl overflow-hidden bg-black" (click)="$event.stopPropagation()">
                 <app-video-player 
                   [src]="currentItem.url" 
                   [autoplay]="true"

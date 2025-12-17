@@ -89,7 +89,7 @@
     "asarUnpack": [],
     "nsis": {
       "oneClick": true,
-      "artifactName": "twineSetup.${ext}",
+      "artifactName": "TwineSetup.${ext}",
       "perMachine": true,
       "installerIcon": "public/logo/logo.ico",
       "installerHeaderIcon": "public/logo/logo.ico",
@@ -97,6 +97,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Twine",
+      "uninstallDisplayName": "${productName}",
       "runAfterFinish": true,
       "include": "build/installer.nsh"
     },
